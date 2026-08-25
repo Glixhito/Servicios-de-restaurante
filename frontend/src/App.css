@@ -1,0 +1,57 @@
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { useAuthStore } from './store/authStore'
+
+// Layouts
+import ClienteLayout from './layouts/ClienteLayout'
+import AdminLayout from './layouts/AdminLayout'
+
+// Páginas Cliente
+import MenuPage from './pages/Cliente/MenuPage'
+import CarritoPage from './pages/Cliente/CarritoPage'
+import CheckoutPage from './pages/Cliente/CheckoutPage'
+import RastrearPage from './pages/Cliente/RastrearPage'
+
+// Páginas Admin
+import LoginPage from './pages/Admin/LoginPage'
+import DashboardPage from './pages/Admin/DashboardPage'
+import PedidosPage from './pages/Admin/PedidosPage'
+import ProductosPage from './pages/Admin/ProductosPage'
+import CategoriasPage from './pages/Admin/CategoriasPage'
+import ZonasPage from './pages/Admin/ZonasPage'
+
+function App() {
+  const { isAuthenticated } = useAuthStore()
+
+  return (
+    <Router>
+      <Routes>
+        {/* RUTAS CLIENTE - SIN PROTECCIÓN */}
+        <Route element={<ClienteLayout />}>
+          <Route path="/" element={<MenuPage />} />
+          <Route path="/carrito" element={<CarritoPage />} />
+          <Route path="/checkout" element={<CheckoutPage />} />
+          <Route path="/rastrear" element={<RastrearPage />} />
+        </Route>
+
+        {/* RUTAS ADMIN */}
+        <Route path="/admin/login" element={<LoginPage />} />
+        
+        {isAuthenticated ? (
+          <Route element={<AdminLayout />}>
+            <Route path="/admin/dashboard" element={<DashboardPage />} />
+            <Route path="/admin/pedidos" element={<PedidosPage />} />
+            <Route path="/admin/productos" element={<ProductosPage />} />
+            <Route path="/admin/categorias" element={<CategoriasPage />} />
+            <Route path="/admin/zonas" element={<ZonasPage />} />
+          </Route>
+        ) : null}
+
+        {/* REDIRECCIONES */}
+        <Route path="/admin" element={<Navigate to="/admin/login" />} />
+        <Route path="*" element={<Navigate to="/" />} />
+      </Routes>
+    </Router>
+  )
+}
+
+export default App
