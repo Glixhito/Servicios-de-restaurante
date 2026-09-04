@@ -11,8 +11,19 @@ export class DashboardService {
   ) {}
 
   async obtenerResumen(restaurante_id: string) {
-    const hoy = new Date();
-    hoy.setHours(0, 0, 0, 0);
+    // 🇨🇴 Obtenemos la fecha actual exacta en la zona horaria de Colombia con tipado correcto
+    const opcionesFecha: Intl.DateTimeFormatOptions = { 
+      timeZone: 'America/Bogota', 
+      year: 'numeric', 
+      month: '2-digit', 
+      day: '2-digit' 
+    };
+    
+    const formatter = new Intl.DateTimeFormat('en-CA', opcionesFecha); // Formato YYYY-MM-DD
+    const fechaColombiaStr = formatter.format(new Date()); // Ej: "2026-08-31"
+
+    // Creamos el objeto Date interpretando esa fecha local como el inicio del día en Colombia (00:00:00)
+    const hoy = new Date(`${fechaColombiaStr}T00:00:00-05:00`);
 
     const porEstado = await this.pedidoRepository
       .createQueryBuilder('p')

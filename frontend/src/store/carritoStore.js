@@ -6,37 +6,63 @@ export const useCarritoStore = create(
     (set, get) => ({
       items: [],
 
-      agregarProducto: (producto, cantidad = 1) => {
-        const items = get().items
-        const existe = items.find(item => item.id === producto.id)
+      agregarProducto: (producto, porcionSeleccionada = null, cantidad = 1) => {
+        set(state => {
+          const porcionId = porcionSeleccionada?.id || null;
+          
+          // 🛡️ Extracción limpia y segura de valores primitivos (números)
+          const gramosVal = porcionSeleccionada?.gramos ? Number(porcionSeleccionada.gramos) : null;
+          const precioVal = porcionSeleccionada?.precio ? Number(porcionSeleccionada.precio) : Number(producto?.precio) || 0;
+          
+          // ID único para diferenciar porciones del mismo plato (ej. 280g vs 400g)
+          const cartItemId = porcionId ? `${producto.id}-${porcionId}` : producto.id;
+          const itemsActuales = Array.isArray(state.items) ? state.items : [];
 
-        if (existe) {
-          existe.cantidad += cantidad
-        } else {
-          items.push({
-            id: producto.id,
-            nombre: producto.nombre,
-            precio: producto.precio,
-            imagen_url: producto.imagen_url,
-            cantidad,
-          })
-        }
+          const index = itemsActuales.findIndex(item => (item.cartItemId || item.id) === cartItemId);
 
-        set({ items: [...items] })
+          if (index > -1) {
+            const nuevosItems = [...itemsActuales];
+            nuevosItems[index].cantidad += Number(cantidad) || 1;
+            return { items: nuevosItems };
+          } else {
+            const nuevoItem = {
+              cartItemId,
+              id: cartItemId, // Mantenemos id por compatibilidad
+              producto_id: producto.id,
+              producto_porcion_id: porcionId,
+              nombre: producto.nombre || 'Plato',
+              imagen_url: producto.imagen_url || '',
+              precio: precioVal,
+              gramos: gramosVal, // 👈 Número limpio, nunca un objeto
+              cantidad: Number(cantidad) || 1,
+            };
+            return { items: [...itemsActuales, nuevoItem] };
+          }
+        });
       },
 
-      actualizarCantidad: (productoId, cantidad) => {
-        const items = get().items
-        const item = items.find(i => i.id === productoId)
-        if (item) {
-          item.cantidad = Math.max(1, cantidad)
-          set({ items: [...items] })
-        }
+      actualizarCantidad: (cartItemId, cantidad) => {
+        set(state => {
+          const itemsActuales = Array.isArray(state.items) ? state.items : [];
+          return {
+            items: itemsActuales.map(item => {
+              const currentId = item.cartItemId || item.id;
+              if (currentId === cartItemId) {
+                return { ...item, cantidad: Math.max(1, cantidad) };
+              }
+              return item;
+            })
+          };
+        });
       },
 
-      removerProducto: (productoId) => {
-        const items = get().items.filter(item => item.id !== productoId)
-        set({ items })
+      removerProducto: (cartItemId) => {
+        set(state => {
+          const itemsActuales = Array.isArray(state.items) ? state.items : [];
+          return {
+            items: itemsActuales.filter(item => (item.cartItemId || item.id) !== cartItemId)
+          };
+        });
       },
 
       limpiarCarrito: () => {
@@ -44,11 +70,19 @@ export const useCarritoStore = create(
       },
 
       obtenerSubtotal: () => {
-        return get().items.reduce((sum, item) => sum + (item.precio * item.cantidad), 0)
+        const state = get();
+        const itemsActuales = Array.isArray(state.items) ? state.items : [];
+        return itemsActuales.reduce((sum, item) => {
+          const precio = Number(item?.precio) || 0;
+          const cantidad = Number(item?.cantidad) || 0;
+          return sum + (precio * cantidad);
+        }, 0);
       },
 
       obtenerCantidadTotal: () => {
-        return get().items.reduce((sum, item) => sum + item.cantidad, 0)
+        const state = get();
+        const itemsActuales = Array.isArray(state.items) ? state.items : [];
+        return itemsActuales.reduce((sum, item) => sum + (Number(item?.cantidad) || 0), 0);
       },
     }),
     {

@@ -1,3 +1,6 @@
+// 🇨🇴 Forzar zona horaria de Colombia en todo el servidor
+process.env.TZ = 'America/Bogota';
+
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -29,6 +32,6 @@ async function bootstrap() {
 
   const port = 4000;
   await app.listen(port);
-  console.log(`\n🚀 Servidor ejecutándose en puerto ${port}`);
+  console.log(`\n🚀 Servidor ejecutándose en puerto ${port} (Hora sincronizada: Colombia)`);
 }
 bootstrap();

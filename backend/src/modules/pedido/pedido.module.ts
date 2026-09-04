@@ -12,8 +12,9 @@ import { PagoModule } from '../pago/pago.module';
 
 import { Cliente } from '../cliente/entities/cliente.entity';
 import { Producto } from '../producto/entities/producto.entity';
+import { ProductoPorcion } from '../producto/entities/producto-porcion.entity'; // 💡 1. Importar la entidad de porciones
 import { PagoQR } from '../pago/entities/pago-qr.entity';
-import { ZonaDomicilio } from '../zona-domicilio/entities/zona-domicilio.entity'; // 💡 1. Importar la entidad ZonaDomicilio
+import { ZonaDomicilio } from '../zona-domicilio/entities/zona-domicilio.entity';
 
 @Module({
   imports: [
@@ -24,7 +25,8 @@ import { ZonaDomicilio } from '../zona-domicilio/entities/zona-domicilio.entity'
       PagoQR,
       Cliente,
       Producto,
-      ZonaDomicilio, // 💡 2. Registrar el repositorio de ZonaDomicilio aquí
+      ProductoPorcion, // 💡 2. Registrar el repositorio aquí para que el servicio pueda usarlo
+      ZonaDomicilio,
     ]),
     ProductoModule,
     ZonaDomicilioModule,

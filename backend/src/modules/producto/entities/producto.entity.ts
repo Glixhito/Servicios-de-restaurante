@@ -10,6 +10,7 @@ import {
 import { Restaurante } from '../../restaurante/entities/restaurante.entity';
 import { Categoria } from '../../categoria/entities/categoria.entity';
 import { DetallePedido } from '../../pedido/entities/detalle-pedido.entity';
+import { ProductoPorcion } from './producto-porcion.entity'; // ⬅️ IMPORTACIÓN AGREGADA
 
 export enum EstadoProducto {
   ACTIVO = 'ACTIVO',
@@ -37,7 +38,8 @@ export class Producto {
   @Column({ type: 'varchar', length: 500, nullable: true })
   imagen_url: string;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2 })
+  // ⬅️ MODIFICADO: Permite nulos. Las carnes no tendrán precio fijo aquí, sino en sus porciones.
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
   precio: number;
 
   @Column({ type: 'boolean', default: true })
@@ -71,4 +73,11 @@ export class Producto {
 
   @OneToMany(() => DetallePedido, (det) => det.producto)
   detalles: DetallePedido[];
+
+  // ⬅️ NUEVA RELACIÓN AGREGADA: Conecta el producto con sus opciones de gramaje
+  @OneToMany(() => ProductoPorcion, (porcion) => porcion.producto, {
+    cascade: true,
+    eager: true,
+  })
+  porciones: ProductoPorcion[];
 }

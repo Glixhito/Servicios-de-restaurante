@@ -6,6 +6,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, IsNull } from 'typeorm';
 import { Producto, EstadoProducto } from './entities/producto.entity';
+import { ProductoPorcion } from './entities/producto-porcion.entity';
 import { CreateProductoDto } from './dto/create-producto.dto';
 import { UpdateProductoDto } from './dto/update-producto.dto';
 import { ProductoGateway } from './producto.gateway';
@@ -15,6 +16,8 @@ export class ProductoService {
   constructor(
     @InjectRepository(Producto)
     private readonly productoRepository: Repository<Producto>,
+    @InjectRepository(ProductoPorcion)
+    private readonly porcionRepository: Repository<ProductoPorcion>,
     private readonly productoGateway: ProductoGateway,
   ) {}
 
@@ -57,6 +60,7 @@ export class ProductoService {
     soloActivos: boolean = true,
   ): Promise<Producto[]> {
     const query = this.productoRepository.createQueryBuilder('p')
+      .leftJoinAndSelect('p.porciones', 'porciones')
       .where('p.restaurante_id = :restaurante_id', { restaurante_id })
       .andWhere('p.deleted_at IS NULL');
 
@@ -81,6 +85,7 @@ export class ProductoService {
         estado: EstadoProducto.ACTIVO,
         deleted_at: IsNull(),
       },
+      relations: ['porciones'],
       order: { nombre: 'ASC' },
     });
   }
@@ -91,7 +96,7 @@ export class ProductoService {
   ): Promise<Producto> {
     const producto = await this.productoRepository.findOne({
       where: { id, restaurante_id, deleted_at: IsNull() },
-      relations: ['categoria'],
+      relations: ['categoria', 'porciones'],
     });
 
     if (!producto) {
@@ -106,14 +111,57 @@ export class ProductoService {
     restaurante_id: string,
     dto: UpdateProductoDto,
   ): Promise<Producto> {
-    const producto = await this.obtenerPorId(id, restaurante_id);
-    Object.assign(producto, dto);
-    const actualizado = await this.productoRepository.save(producto);
+    // 1. Verificar que el producto exista
+    await this.obtenerPorId(id, restaurante_id);
+
+    // 2. Sincronización manual y segura de porciones
+    if (dto.porciones) {
+      const porcionesDto = dto.porciones as any[];
+      const porcionesActuales = await this.porcionRepository.find({ where: { productoId: id } });
+      const idsEnDto = porcionesDto.filter((p) => p.id).map((p) => p.id);
+
+      // Actualizar o crear porciones de forma explícita
+      for (const pDto of porcionesDto) {
+        if (pDto.id) {
+          await this.porcionRepository.update(pDto.id, {
+            productoId: id,
+            gramos: Number(pDto.gramos),
+            precio: Number(pDto.precio),
+          });
+        } else {
+          const nuevaPorcion = this.porcionRepository.create({
+            productoId: id,
+            gramos: Number(pDto.gramos),
+            precio: Number(pDto.precio),
+          });
+          await this.porcionRepository.save(nuevaPorcion);
+        }
+      }
+
+      // Eliminar porciones retiradas (protegidas si tienen historial de ventas)
+      for (const porcionActual of porcionesActuales) {
+        if (!idsEnDto.includes(porcionActual.id)) {
+          try {
+            await this.porcionRepository.delete(porcionActual.id);
+          } catch (error) {
+            console.warn(`No se pudo eliminar la porción ${porcionActual.id} porque tiene historial en pedidos.`);
+          }
+        }
+      }
+
+      // Evitamos que el dto siga teniendo las porciones para el update final
+      delete dto.porciones;
+    }
+
+    // 3. Actualizar campos generales (nombre, precio, imagen de Cloudinary) de forma directa sin tocar relaciones
+    if (Object.keys(dto).length > 0) {
+      await this.productoRepository.update(id, dto);
+    }
 
     // Notificar en tiempo real
     this.productoGateway.notificarCambioMenu();
 
-    return actualizado;
+    return await this.obtenerPorId(id, restaurante_id);
   }
 
   async toggleDisponibilidad(

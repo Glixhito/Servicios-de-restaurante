@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom'
 import { useAuthStore } from './store/authStore'
 
 // Páginas Cliente
@@ -19,6 +19,11 @@ import ZonasPage from './pages/Admin/ZonasPage'
 import ClienteLayout from './layouts/ClienteLayout'
 import AdminLayout from './layouts/AdminLayout'
 
+// Componente para proteger las rutas privadas del admin
+const ProtectedRoute = ({ isAuthenticated }) => {
+  return isAuthenticated ? <Outlet /> : <Navigate to="/admin/login" replace />
+}
+
 function App() {
   const { isAuthenticated } = useAuthStore()
 
@@ -36,7 +41,7 @@ function App() {
         {/* RUTAS ADMIN */}
         <Route path="/admin/login" element={<LoginPage />} />
         
-        {isAuthenticated ? (
+        <Route element={<ProtectedRoute isAuthenticated={isAuthenticated} />}>
           <Route element={<AdminLayout />}>
             <Route path="/admin/dashboard" element={<DashboardPage />} />
             <Route path="/admin/pedidos" element={<PedidosPage />} />
@@ -44,9 +49,10 @@ function App() {
             <Route path="/admin/categorias" element={<CategoriasPage />} />
             <Route path="/admin/zonas" element={<ZonasPage />} />
           </Route>
-        ) : (
-          <Route path="/admin/*" element={<Navigate to="/admin/login" />} />
-        )}
+        </Route>
+
+        {/* Ruta comodín para redirigir URLs inválidas al inicio */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
   )

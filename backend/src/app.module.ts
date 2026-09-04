@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { ScheduleModule } from '@nestjs/schedule'; // ⬅️ 1. IMPORTACIÓN AGREGADA
+import { ScheduleModule } from '@nestjs/schedule';
 import { getTypeOrmConfig } from './config/typeorm.config';
 import { RestauranteModule } from './modules/restaurante/restaurante.module';
 import { CategoriaModule } from './modules/categoria/categoria.module';
@@ -24,7 +24,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
       useFactory: (configService: ConfigService) =>
         getTypeOrmConfig(configService),
     }),
-    ScheduleModule.forRoot(), // ⬅️ 2. INICIALIZACIÓN DE CRON JOBS AGREGADA
+    ScheduleModule.forRoot(),
     RestauranteModule,
     CategoriaModule,
     ProductoModule,

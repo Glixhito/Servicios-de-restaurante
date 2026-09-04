@@ -11,7 +11,6 @@ import {
 import { Restaurante } from '../../restaurante/entities/restaurante.entity';
 import { Cliente } from '../../cliente/entities/cliente.entity';
 import { ZonaDomicilio } from '../../zona-domicilio/entities/zona-domicilio.entity';
-// 💡 FIX 1: Importamos correctamente nuestras nuevas clases
 import { PagoQR, TipoPagoQR } from '../../pago/entities/pago-qr.entity';
 import { DetallePedido } from './detalle-pedido.entity';
 import { HistorialEstadoPedido } from './historial-estado-pedido.entity';
@@ -21,6 +20,7 @@ export enum EstadoPedido {
   CONFIRMADO = 'CONFIRMADO',
   PREPARANDO = 'PREPARANDO',
   LISTO = 'LISTO',
+  ENTREGADO = 'ENTREGADO',
   EN_CAMINO = 'EN_CAMINO',
   RECHAZADO = 'RECHAZADO',
 }
@@ -45,8 +45,8 @@ export class Pedido {
   @Column({ type: 'varchar', length: 500 })
   direccion: string;
 
-  @Column({ type: 'uuid' })
-  zona_domicilio_id: string;
+  @Column({ type: 'uuid', nullable: true })
+  zona_domicilio_id: string | null;
 
   @Column({ type: 'varchar', length: 500, nullable: true })
   referencia: string;
@@ -54,7 +54,6 @@ export class Pedido {
   @Column({ type: 'text', nullable: true })
   instrucciones: string;
 
-  // 💡 FIX 2: Usamos TipoPagoQR en lugar del viejo MetodoPago
   @Column({ type: 'enum', enum: TipoPagoQR, default: TipoPagoQR.EFECTIVO })
   metodo_pago: TipoPagoQR;
 
@@ -70,17 +69,18 @@ export class Pedido {
   @Column({ type: 'boolean', default: false })
   pago_efectivo_recibido: boolean;
 
-  // 💡 FIX 3: Agregamos pago_verificado (Vital para nuestro Webhook)
   @Column({ type: 'boolean', default: false })
   pago_verificado: boolean;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
   razon_rechazo: string;
 
-  @CreateDateColumn()
+  // ✅ CAMBIADO a 'timestamptz' para evitar desfases al leer desde Node.js
+  @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;
 
-  @UpdateDateColumn()
+  // ✅ CAMBIADO a 'timestamptz'
+  @UpdateDateColumn({ type: 'timestamptz' })
   updated_at: Date;
 
   @ManyToOne(() => Restaurante, (rest) => rest.pedidos, {
@@ -93,10 +93,9 @@ export class Pedido {
   })
   cliente: Cliente;
 
-  @ManyToOne(() => ZonaDomicilio, (zona) => zona.pedidos)
+  @ManyToOne(() => ZonaDomicilio, (zona) => zona.pedidos, { nullable: true })
   zona: ZonaDomicilio;
 
-  // 💡 FIX 4: Cambiamos 'pago' por 'pago_qr' para conectar perfecto el puente
   @OneToOne(() => PagoQR, (pagoQR) => pagoQR.pedido, { nullable: true })
   pago_qr: PagoQR;
 

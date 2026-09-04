@@ -14,6 +14,11 @@ export class ItemCarritoDto {
   @IsUUID()
   producto_id: string;
 
+  // 👈 NUEVO: Identificador de la porción/gramaje elegido (opcional para productos estándar)
+  @IsUUID()
+  @IsOptional()
+  producto_porcion_id?: string;
+
   @IsNumber()
   cantidad: number;
 }

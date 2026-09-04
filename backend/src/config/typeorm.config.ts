@@ -3,9 +3,9 @@ import { ConfigService } from '@nestjs/config';
 import { Restaurante } from '../modules/restaurante/entities/restaurante.entity';
 import { Categoria } from '../modules/categoria/entities/categoria.entity';
 import { Producto } from '../modules/producto/entities/producto.entity';
+import { ProductoPorcion } from '../modules/producto/entities/producto-porcion.entity';
 import { ZonaDomicilio } from '../modules/zona-domicilio/entities/zona-domicilio.entity';
 import { Cliente } from '../modules/cliente/entities/cliente.entity';
-// ⬇️ REEMPLAZAMOS EL PAGO VIEJO POR NUESTRAS NUEVAS ENTIDADES PRO
 import { PagoQR } from '../modules/pago/entities/pago-qr.entity';
 import { AuditoriaPago } from '../modules/pago/entities/auditoria-pago.entity';
 import { Pedido } from '../modules/pedido/entities/pedido.entity';
@@ -17,19 +17,16 @@ export const getTypeOrmConfig = (
   configService: ConfigService,
 ): TypeOrmModuleOptions => ({
   type: 'postgres',
-  host: configService.get('DATABASE_HOST'),
-  port: parseInt(configService.get('DATABASE_PORT') || '5432', 10),
-  username: configService.get('DATABASE_USER'),
-  password: configService.get('DATABASE_PASSWORD'),
-  database: configService.get('DATABASE_NAME'),
+  url: configService.get('DATABASE_URL_POOLED') || configService.get('DATABASE_URL'),
   entities: [
     Restaurante,
     Categoria,
     Producto,
+    ProductoPorcion,
     ZonaDomicilio,
     Cliente,
-    PagoQR,      // ⬅️ NUEVA ENTIDAD
-    AuditoriaPago, // ⬅️ NUEVA ENTIDAD DE AUDITORÍA
+    PagoQR,      
+    AuditoriaPago, 
     Pedido,
     DetallePedido,
     HistorialEstadoPedido,
@@ -37,4 +34,7 @@ export const getTypeOrmConfig = (
   ],
   synchronize: configService.get('NODE_ENV') === 'development',
   logging: configService.get('NODE_ENV') === 'development',
+  ssl: {
+    rejectUnauthorized: false, // 👈 Obligatorio para establecer la conexión segura con Neon
+  },
 });

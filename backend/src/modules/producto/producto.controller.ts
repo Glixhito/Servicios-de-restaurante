@@ -22,7 +22,7 @@ export class ProductoController {
   @Get('menu')
   async obtenerMenu() {
     // ID real de tu base de datos
-    const restaurante_id = 'bedce470-9c18-48ee-9ff3-da819cde2f14';
+    const restaurante_id = process.env.RESTAURANTE_ID || '9c9a269e-b09a-4c34-ad76-af2fe86ca62c';
     return await this.productoService.obtenerPorRestaurante(restaurante_id, true);
   }
 
@@ -31,7 +31,7 @@ export class ProductoController {
     @Param('categoria_id') categoria_id: string,
   ) {
     // ID real de tu base de datos
-    const restaurante_id = 'bedce470-9c18-48ee-9ff3-da819cde2f14';
+    const restaurante_id = process.env.RESTAURANTE_ID || '9c9a269e-b09a-4c34-ad76-af2fe86ca62c';
     return await this.productoService.obtenerPorCategoria(
       categoria_id,
       restaurante_id,
