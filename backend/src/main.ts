@@ -15,17 +15,23 @@ async function bootstrap() {
   // Seguridad
   app.use(helmet());
 
-  // CORS nativo optimizado para producción y desarrollo
-  const allowedOrigins = [
-    'https://sistema-pedidos-p2o8.vercel.app',
-    'http://localhost:5173',
-    configService.get('FRONTEND_URL'),
-  ].filter(Boolean); // Filtra valores nulos o indefinidos
-
+  // CORS nativo optimizado para aceptar cualquier preview de Vercel y desarrollo local
   app.enableCors({
     origin: (origin, callback) => {
       // Permitir solicitudes sin origen (como Postman o apps móviles)
-      if (!origin || allowedOrigins.includes(origin)) {
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      const frontendUrl = configService.get('FRONTEND_URL');
+      
+      // Permitir si es localhost, cualquier subdominio de Vercel, o la URL de producción exacta
+      const isAllowed = 
+        origin.includes('localhost') || 
+        origin.endsWith('.vercel.app') || 
+        (frontendUrl && origin === frontendUrl);
+
+      if (isAllowed) {
         callback(null, true);
       } else {
         callback(new Error('Bloqueado por la política CORS'));
