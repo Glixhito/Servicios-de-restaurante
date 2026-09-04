@@ -7,8 +7,18 @@ import { useCarritoStore } from '../../store/carritoStore'
 import Loading from '../../components/shared/Loading'
 import { ShoppingBag, Flame, Plus, Minus, X, ChevronRight, Utensils, Search } from 'lucide-react'
 
-// Conexión en tiempo real con el backend (puerto 4000)
-const socket = io('http://localhost:4000')
+// ⚡ Conexión dinámica inteligente: Usa la variable de entorno o Render por defecto
+const getSocketUrl = () => {
+  const apiUrl = import.meta.env.VITE_API_URL;
+  if (apiUrl) {
+    return apiUrl.replace(/\/api\/?$/, '');
+  }
+  return 'https://servicios-de-restaurante.onrender.com';
+};
+
+const socket = io(getSocketUrl(), {
+  transports: ['websocket', 'polling'],
+})
 
 export default function MenuPage() {
   const [categorias, setCategorias] = useState([])
