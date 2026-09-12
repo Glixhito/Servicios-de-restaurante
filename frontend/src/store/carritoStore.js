@@ -6,25 +6,41 @@ export const useCarritoStore = create(
     (set, get) => ({
       items: [],
 
-      agregarProducto: (producto, porcionSeleccionada = null, cantidad = 1) => {
+      // 🚀 ACTUALIZADO: Recibe adiciones como tercer parámetro
+      agregarProducto: (producto, porcionSeleccionada = null, adiciones = [], cantidad = 1) => {
         set(state => {
           const porcionId = porcionSeleccionada?.id || null;
           
-          // 🛡️ Extracción limpia y segura de valores primitivos (números)
+          // 🛡️ Extracción limpia y segura de valores
           const gramosVal = porcionSeleccionada?.gramos ? Number(porcionSeleccionada.gramos) : null;
-          const precioVal = porcionSeleccionada?.precio ? Number(porcionSeleccionada.precio) : Number(producto?.precio) || 0;
+          const precioBase = porcionSeleccionada?.precio ? Number(porcionSeleccionada.precio) : Number(producto?.precio) || 0;
           
-          // ID único para diferenciar porciones del mismo plato (ej. 280g vs 400g)
-          const cartItemId = porcionId ? `${producto.id}-${porcionId}` : producto.id;
-          const itemsActuales = Array.isArray(state.items) ? state.items : [];
+          // 🧀 Calcular el precio extra de las adiciones
+          const adicionesSeguras = Array.isArray(adiciones) ? adiciones : [];
+          const precioAdiciones = adicionesSeguras.reduce((sum, ad) => sum + (Number(ad.precio) || 0), 0);
+          
+          const precioFinalUnitario = precioBase + precioAdiciones;
+          
+          // 🆔 Crear un string con los IDs de las adiciones para diferenciarlas
+          const idsAdiciones = adicionesSeguras.length > 0 
+            ? adicionesSeguras.map(a => a.id).sort().join('-') 
+            : 'sin-adiciones';
 
+          // ID único para el carrito (Plato + Porción + Adiciones)
+          const cartItemId = porcionId 
+            ? `${producto.id}-${porcionId}-${idsAdiciones}` 
+            : `${producto.id}-${idsAdiciones}`;
+
+          const itemsActuales = Array.isArray(state.items) ? state.items : [];
           const index = itemsActuales.findIndex(item => (item.cartItemId || item.id) === cartItemId);
 
           if (index > -1) {
+            // Si es exactamente el mismo plato con los mismos toppings, sumamos la cantidad
             const nuevosItems = [...itemsActuales];
             nuevosItems[index].cantidad += Number(cantidad) || 1;
             return { items: nuevosItems };
           } else {
+            // Si es nuevo (o tiene toppings diferentes), lo agregamos como item nuevo
             const nuevoItem = {
               cartItemId,
               id: cartItemId, // Mantenemos id por compatibilidad
@@ -32,8 +48,9 @@ export const useCarritoStore = create(
               producto_porcion_id: porcionId,
               nombre: producto.nombre || 'Plato',
               imagen_url: producto.imagen_url || '',
-              precio: precioVal,
-              gramos: gramosVal, // 👈 Número limpio, nunca un objeto
+              precio: precioFinalUnitario, // Precio total unitario (Plato + Toppings)
+              gramos: gramosVal,
+              adiciones: adicionesSeguras, // 👈 Guardamos las adiciones para mostrarlas en CarritoPage
               cantidad: Number(cantidad) || 1,
             };
             return { items: [...itemsActuales, nuevoItem] };

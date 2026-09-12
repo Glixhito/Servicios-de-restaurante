@@ -57,7 +57,7 @@ export default function CarritoPage() {
               <img 
                 src={item.imagen_url || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=700&h=500&fit=crop&auto=format"} 
                 alt={item.nombre} 
-                className="w-20 h-20 rounded-2xl object-cover border border-[#3a2a18]" 
+                className="w-20 h-20 rounded-2xl object-cover border border-[#3a2a18] self-start mt-1" 
               />
               
               <div className="flex-1 min-w-0 flex flex-col justify-between h-full py-0.5">
@@ -70,27 +70,36 @@ export default function CarritoPage() {
 
                   {/* 🥩 Muestra el gramaje seleccionado si es un corte de carne con porción */}
                   {item.gramos && (
-                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-[#f0a030] bg-[#f0a030]/10 px-2 py-0.5 rounded-md mt-1 border border-[#f0a030]/20">
+                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-[#f0a030] bg-[#f0a030]/10 px-2 py-0.5 rounded-md mt-1.5 border border-[#f0a030]/20">
                       <Utensils size={12} />
                       {item.gramos} gramos
                     </span>
                   )}
 
-                  {/* Precio unitario x cantidad */}
-                  <p className="text-sm text-[#f0a030] font-bold mt-1">
+                  {/* 🧀 Muestra las adiciones seleccionadas */}
+                  {item.adiciones && item.adiciones.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1.5">
+                      {item.adiciones.map((adicion, idx) => (
+                        <span key={idx} className="inline-flex items-center text-[10px] font-medium text-amber-200/80 bg-amber-500/10 px-1.5 py-0.5 rounded-md border border-amber-500/20">
+                          + {adicion.nombre}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Precio unitario x cantidad (Ya incluye adiciones si viene del store) */}
+                  <p className="text-sm text-[#f0a030] font-bold mt-1.5">
                     {formatearPrecio(item.precio * item.cantidad)}
                   </p>
                 </div>
                 
                 <div className="flex items-center justify-between mt-3">
                   <div className="flex items-center gap-3 bg-[#1a1209] border border-[#3a2a18] px-2 py-1.5 rounded-lg shadow-inner">
-                    {/* 👇 Usamos uniqueId para que sepa exactamente qué porción modificar */}
                     <button onClick={() => actualizarCantidad(uniqueId, item.cantidad - 1)} className="text-[#9c8a6e] hover:text-[#e8621a] transition-colors"><Minus size={16} /></button>
                     <span className="text-sm font-bold w-4 text-center">{item.cantidad}</span>
                     <button onClick={() => actualizarCantidad(uniqueId, item.cantidad + 1)} className="text-[#9c8a6e] hover:text-[#e8621a] transition-colors"><Plus size={16} /></button>
                   </div>
                   
-                  {/* 👇 Usamos uniqueId para borrar la porción correcta */}
                   <button onClick={() => removerProducto(uniqueId)} className="text-red-400 bg-red-400/10 hover:bg-red-500 hover:text-white p-2 rounded-lg transition-all">
                     <Trash2 size={18} />
                   </button>

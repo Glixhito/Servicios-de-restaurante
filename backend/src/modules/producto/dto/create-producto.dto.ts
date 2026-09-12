@@ -11,6 +11,21 @@ import {
 import { Type } from 'class-transformer';
 import { CrearProductoPorcionDto } from './crear-producto-porcion.dto';
 
+// 🧀 NUEVO DTO: Definimos la estructura que debe tener cada adición recibida
+export class CrearProductoAdicionDto {
+  @IsOptional()
+  @IsString()
+  id?: string;
+
+  @IsString()
+  @MinLength(2)
+  nombre: string;
+
+  @IsNumber()
+  @Min(0)
+  precio: number;
+}
+
 export class CreateProductoDto {
   @IsString()
   @MinLength(3)
@@ -39,4 +54,11 @@ export class CreateProductoDto {
   @ValidateNested({ each: true })
   @Type(() => CrearProductoPorcionDto)
   porciones?: CrearProductoPorcionDto[];
+
+  // 🧀 3. NUEVO: Agregamos la validación en cascada para el arreglo de adiciones
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CrearProductoAdicionDto)
+  adiciones?: CrearProductoAdicionDto[];
 }

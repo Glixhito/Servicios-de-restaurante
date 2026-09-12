@@ -5,9 +5,9 @@ import { productosService } from '../../services/productosService'
 import { categoriasService } from '../../services/categoriasService'
 import { useCarritoStore } from '../../store/carritoStore'
 import Loading from '../../components/shared/Loading'
-import { ShoppingBag, Flame, Plus, Minus, X, ChevronRight, Utensils, Search } from 'lucide-react'
+import { ShoppingBag, Flame, Plus, Minus, X, ChevronRight, Utensils, Search, Check } from 'lucide-react'
 
-// ⚡ Conexión dinámica inteligente: Usa la variable de entorno o Render por defecto
+// ⚡ Conexión dinámica inteligente
 const getSocketUrl = () => {
   const apiUrl = import.meta.env.VITE_API_URL;
   if (apiUrl) {
@@ -27,20 +27,19 @@ export default function MenuPage() {
   const [loading, setLoading] = useState(true)
   const [selectedItem, setSelectedItem] = useState(null)
   const [modalQty, setModalQty] = useState(1)
-  const [porcionSeleccionada, setPorcionSeleccionada] = useState(null) // 🥩 Estado para el gramaje elegido
+  const [porcionSeleccionada, setPorcionSeleccionada] = useState(null)
+  const [adicionesSeleccionadas, setAdicionesSeleccionadas] = useState([]) // 🧀 Nuevo estado para toppings
 
   const { agregarProducto, obtenerCantidadTotal, obtenerSubtotal } = useCarritoStore()
 
   useEffect(() => {
     cargarDatos()
 
-    // ESCUCHAR CAMBIOS EN TIEMPO REAL DESDE EL ADMIN
     socket.on('menu_actualizado', () => {
       console.log('⚡ ¡Actualización detectada en el menú!')
-      cargarDatos() // Refresca los platos y categorías automáticamente
+      cargarDatos()
     })
 
-    // Limpiar el evento al desmontar el componente
     return () => {
       socket.off('menu_actualizado')
     }
@@ -79,7 +78,6 @@ export default function MenuPage() {
     }
   }
 
-  // 🛡️ FUNCIÓN DE FORMATEO ESTRICTO (Sin decimales)
   const formatearPrecio = (precio) => {
     const valorSeguro = Number(precio) || 0;
     const precioRedondeado = Math.round(valorSeguro);
@@ -101,7 +99,8 @@ export default function MenuPage() {
   const openDetail = (item) => {
     setSelectedItem(item)
     setModalQty(1)
-    // Si el producto tiene porciones, seleccionamos la primera por defecto
+    setAdicionesSeleccionadas([]) // 🧹 Limpiar adiciones al abrir un plato nuevo
+    
     if (item.porciones && item.porciones.length > 0) {
       setPorcionSeleccionada(item.porciones[0])
     } else {
@@ -113,6 +112,19 @@ export default function MenuPage() {
     setSelectedItem(null)
     setModalQty(1)
     setPorcionSeleccionada(null)
+    setAdicionesSeleccionadas([])
+  }
+
+  // 🧀 Función para marcar/desmarcar una adición
+  const toggleAdicion = (adicion) => {
+    setAdicionesSeleccionadas(prev => {
+      const existe = prev.find(a => a.id === adicion.id);
+      if (existe) {
+        return prev.filter(a => a.id !== adicion.id);
+      } else {
+        return [...prev, adicion];
+      }
+    });
   }
 
   const addFromModal = () => {
@@ -121,16 +133,19 @@ export default function MenuPage() {
         alert('Por favor selecciona un gramaje')
         return
       }
-      // Llamamos a la tienda pasando el producto, la porción y la cantidad
-      agregarProducto(selectedItem, porcionSeleccionada, modalQty)
+      // 🚀 Ahora enviamos 4 cosas: producto, porcion, ADICIONES y cantidad
+      agregarProducto(selectedItem, porcionSeleccionada, adicionesSeleccionadas, modalQty)
       closeDetail()
     }
   }
 
-  // Precio dinámico actual en el modal
-  const precioActualModal = selectedItem 
-    ? (porcionSeleccionada ? porcionSeleccionada.precio : selectedItem.precio)
+  // 💰 Cálculo Dinámico de Precios
+  const precioBaseModal = selectedItem 
+    ? (porcionSeleccionada ? Number(porcionSeleccionada.precio) : Number(selectedItem.precio))
     : 0;
+  
+  const totalAdicionesModal = adicionesSeleccionadas.reduce((sum, ad) => sum + Number(ad.precio), 0);
+  const precioUnitarioTotal = precioBaseModal + totalAdicionesModal;
 
   if (loading) return <Loading />
 
@@ -145,7 +160,6 @@ export default function MenuPage() {
         </div>
         
         <div className="flex items-center gap-2.5">
-          {/* 🔍 Botón de Rastrear Pedido */}
           <Link 
             to="/rastrear" 
             className="bg-[#231a0d] border border-[#3a2a18] hover:border-[#e8621a]/50 text-[#f5ead8] px-3.5 py-2.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 shadow-sm"
@@ -154,7 +168,6 @@ export default function MenuPage() {
             <span className="hidden sm:inline">Rastrear</span>
           </Link>
 
-          {/* Botón de Carrito */}
           <Link to="/carrito" className="relative bg-[#231a0d] border border-[#3a2a18] px-3.5 py-2.5 rounded-xl text-[#f0a030] hover:bg-[#2e2010] transition flex items-center gap-2 shadow-inner">
             <ShoppingBag size={18} />
             <span className="hidden sm:inline text-xs font-bold">Carrito</span>
@@ -213,7 +226,7 @@ export default function MenuPage() {
           ))}
         </div>
 
-        {/* CUADRÍCULA ADAPTATIVA DE PLATOS */}
+        {/* CUADRÍCULA DE PLATOS */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           
           {productosFiltrados.length === 0 ? (
@@ -233,7 +246,7 @@ export default function MenuPage() {
                 <div 
                   key={producto.id}
                   onClick={() => openDetail(producto)}
-                  className="bg-[#231a0d] border border-[#3a2a18] rounded-3xl overflow-hidden cursor-pointer hover:border-[#e8621a]/60 transition group flex flex-col justify-between shadow-lg"
+                  className="bg-[#231a0d] border border-[#3a2a18] rounded-3xl overflow-hidden cursor-pointer hover:border-[#e8621a]/60 transition group flex flex-col justify-between shadow-lg relative"
                 >
                   <div className="relative h-48 overflow-hidden bg-[#1a1209]">
                     <img
@@ -285,7 +298,7 @@ export default function MenuPage() {
         </div>
       )}
 
-      {/* MODAL DE DETALLE Y SELECCIÓN DE PORCIÓN */}
+      {/* MODAL DE DETALLE Y SELECCIÓN (PORCIONES Y ADICIONES) */}
       {selectedItem && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-[#231a0d] border border-[#3a2a18] w-full max-w-lg rounded-3xl p-6 md:p-8 space-y-6 shadow-2xl relative animate-fade-in max-h-[90vh] overflow-y-auto">
@@ -304,7 +317,7 @@ export default function MenuPage() {
               <p className="text-xs md:text-sm text-[#9c8a6e] leading-relaxed mt-2">{selectedItem.descripcion || 'Preparado al carbón con los mejores cortes y sazón artesanal.'}</p>
             </div>
 
-            {/* 🥩 SELECTOR DE GRAMAJES SI EL PRODUCTO TIENE PORCIONES */}
+            {/* 🥩 SELECTOR DE GRAMAJES */}
             {selectedItem.porciones && selectedItem.porciones.length > 0 && (
               <div className="space-y-2 bg-[#1a1209] p-4 rounded-2xl border border-[#3a2a18]">
                 <label className="text-xs font-bold text-[#f0a030] uppercase tracking-wider flex items-center gap-1.5">
@@ -330,9 +343,46 @@ export default function MenuPage() {
               </div>
             )}
 
+            {/* 🧀 SELECTOR DE ADICIONES / TOPPINGS */}
+            {selectedItem.adiciones && selectedItem.adiciones.length > 0 && (
+              <div className="space-y-3 bg-[#1a1209] p-4 rounded-2xl border border-[#3a2a18]">
+                <label className="text-xs font-bold text-[#f0a030] uppercase tracking-wider flex items-center gap-1.5">
+                  <span className="text-sm">🧀</span> ¿Deseas agregar adiciones?
+                </label>
+                <div className="grid grid-cols-1 gap-2">
+                  {selectedItem.adiciones.map((adicion) => {
+                    const seleccionada = adicionesSeleccionadas.some(a => a.id === adicion.id);
+                    return (
+                      <label
+                        key={adicion.id}
+                        onClick={() => toggleAdicion(adicion)}
+                        className={`flex justify-between items-center p-3 rounded-xl border cursor-pointer transition-all ${
+                          seleccionada
+                            ? 'bg-[#e8621a]/10 border-[#e8621a] text-[#f5ead8]'
+                            : 'bg-[#231a0d] border-[#3a2a18] text-[#9c8a6e] hover:border-[#e8621a]/50 hover:bg-[#2e2010]'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-colors ${
+                            seleccionada ? 'bg-[#e8621a] border-[#e8621a]' : 'border-[#9c8a6e]/50 bg-[#1a1209]'
+                          }`}>
+                            {seleccionada && <Check size={14} className="text-white" />}
+                          </div>
+                          <span className="font-semibold text-sm">{adicion.nombre}</span>
+                        </div>
+                        <span className="text-xs font-bold text-[#f0a030]">
+                          + {formatearPrecio(adicion.precio)}
+                        </span>
+                      </label>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
             <div className="flex justify-between items-center border-t border-b border-[#3a2a18] py-4">
-              <span className="text-xs text-[#9c8a6e]">Precio unitario</span>
-              <span className="text-xl font-bold text-[#f0a030]">{formatearPrecio(precioActualModal)}</span>
+              <span className="text-xs text-[#9c8a6e]">Precio unitario (con adiciones)</span>
+              <span className="text-xl font-bold text-[#f0a030]">{formatearPrecio(precioUnitarioTotal)}</span>
             </div>
 
             <div className="flex justify-between items-center">
@@ -353,7 +403,7 @@ export default function MenuPage() {
               className="w-full bg-[#e8621a] hover:bg-orange-600 text-white font-serif font-bold py-4 rounded-2xl shadow-xl transition flex justify-between px-6 text-base"
             >
               <span>Agregar al Pedido</span>
-              <span>{formatearPrecio(precioActualModal * modalQty)}</span>
+              <span>{formatearPrecio(precioUnitarioTotal * modalQty)}</span>
             </button>
           </div>
         </div>

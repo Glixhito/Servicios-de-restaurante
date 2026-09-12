@@ -4,7 +4,7 @@ import { categoriasService } from '../../services/categoriasService'
 import Loading from '../../components/shared/Loading'
 import Alert from '../../components/shared/Alert'
 import Modal from '../../components/shared/Modal'
-import { Edit, Trash2, Plus, Eye, EyeOff, UtensilsCrossed, Package, Trash, Upload, Image as ImageIcon } from 'lucide-react'
+import { Edit, Trash2, Plus, Eye, EyeOff, UtensilsCrossed, Package, Trash, Upload, Image as ImageIcon, Cheese } from 'lucide-react'
 
 export default function ProductosPage() {
   const [productos, setProductos] = useState([])
@@ -26,6 +26,7 @@ export default function ProductosPage() {
     precio: '',
     imagen_url: '',
     porciones: [],
+    adiciones: [], // 👈 Añadido: estado inicial para adiciones/toppings
   })
 
   useEffect(() => {
@@ -59,6 +60,7 @@ export default function ProductosPage() {
         precio: producto.precio !== null ? producto.precio : '',
         imagen_url: producto.imagen_url || '',
         porciones: producto.porciones ? [...producto.porciones] : [],
+        adiciones: producto.adiciones ? [...producto.adiciones] : [], // 👈 Cargar adiciones si existen
       })
       setPreview(producto.imagen_url || '')
     } else {
@@ -70,13 +72,13 @@ export default function ProductosPage() {
         precio: '',
         imagen_url: '',
         porciones: [],
+        adiciones: [],
       })
       setPreview('')
     }
     setModalOpen(true)
   }
 
-  // Manejar selección de archivo local para vista previa
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -85,11 +87,10 @@ export default function ProductosPage() {
     }
   }
 
-  // ☁️ Función para subir archivo directamente a Cloudinary con el nuevo preset Unsigned
   const subirACloudinary = async (file) => {
     const dataForm = new FormData();
     dataForm.append('file', file);
-    dataForm.append('upload_preset', 'restaurante_preset'); // 👈 Reemplaza esto con el nombre exacto de tu preset Unsigned en Cloudinary
+    dataForm.append('upload_preset', 'restaurante_preset');
 
     const response = await fetch(
       'https://api.cloudinary.com/v1_1/ohjhp1t3/image/upload',
@@ -125,13 +126,31 @@ export default function ProductosPage() {
     setFormData({ ...formData, porciones: nuevasPorciones });
   }
 
+  // 🧀 Funciones para gestionar Adiciones / Toppings
+  const agregarAdicion = () => {
+    setFormData({
+      ...formData,
+      adiciones: [...formData.adiciones, { nombre: '', precio: '' }]
+    })
+  }
+
+  const actualizarAdicion = (index, campo, valor) => {
+    const nuevasAdiciones = [...formData.adiciones];
+    nuevasAdiciones[index][campo] = valor;
+    setFormData({ ...formData, adiciones: nuevasAdiciones });
+  }
+
+  const eliminarAdicion = (index) => {
+    const nuevasAdiciones = formData.adiciones.filter((_, i) => i !== index);
+    setFormData({ ...formData, adiciones: nuevasAdiciones });
+  }
+
   const guardar = async (e) => {
     e.preventDefault()
     try {
       setSubiendoCloudinary(true)
       let urlFinalImagen = formData.imagen_url
 
-      // Si el usuario seleccionó una imagen nueva, la subimos a Cloudinary primero
       if (imagenFile) {
         urlFinalImagen = await subirACloudinary(imagenFile)
       }
@@ -142,9 +161,16 @@ export default function ProductosPage() {
         precio: formData.precio !== '' ? parseFloat(formData.precio) : undefined,
         porciones: formData.porciones.length > 0 
           ? formData.porciones.map(p => ({
-              ...(p.id ? { id: p.id } : {}), // 👈 CRUCIAL: Mantiene el ID si la porción ya existía
+              ...(p.id ? { id: p.id } : {}),
               gramos: parseInt(p.gramos, 10),
               precio: parseFloat(p.precio)
+            }))
+          : undefined,
+        adiciones: formData.adiciones.length > 0
+          ? formData.adiciones.map(a => ({
+              ...(a.id ? { id: a.id } : {}),
+              nombre: a.nombre,
+              precio: parseFloat(a.precio)
             }))
           : undefined
       }
@@ -203,14 +229,14 @@ export default function ProductosPage() {
   return (
     <div className="space-y-6 text-[#f5ead8] animate-fade-in pb-12 w-full max-w-7xl mx-auto px-2 sm:px-0">
       
-      {/* 📱 HEADER RESPONSIVE */}
+      {/* HEADER */}
       <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 bg-[#231a0d] border border-[#3a2a18] p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm">
         <div>
           <h1 className="text-xl sm:text-3xl font-serif font-bold text-[#f5ead8] flex items-center gap-2">
             <UtensilsCrossed className="text-[#e8621a] shrink-0" size={26} />
             <span>Gestión de Productos</span>
           </h1>
-          <p className="text-xs sm:text-sm text-[#9c8a6e] mt-1">Administra los platos, porciones por gramaje y disponibilidad del menú.</p>
+          <p className="text-xs sm:text-sm text-[#9c8a6e] mt-1">Administra los platos, porciones por gramaje, adiciones y disponibilidad.</p>
         </div>
         <button
           onClick={() => abrirModal()}
@@ -229,7 +255,7 @@ export default function ProductosPage() {
         />
       )}
 
-      {/* 📱 TABLA DE PRODUCTOS CON SCROLL HORIZONTAL */}
+      {/* TABLA DE PRODUCTOS */}
       <div className="bg-[#231a0d] border border-[#3a2a18] rounded-2xl sm:rounded-3xl shadow-md overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left min-w-[700px]">
@@ -237,7 +263,7 @@ export default function ProductosPage() {
               <tr className="border-b border-[#3a2a18] text-[#9c8a6e] text-xs uppercase tracking-wider bg-[#1a1209]/40">
                 <th className="py-4 px-5">Producto</th>
                 <th className="py-4 px-5">Categoría</th>
-                <th className="py-4 px-5">Precio / Porciones</th>
+                <th className="py-4 px-5">Precio / Porciones / Adiciones</th>
                 <th className="py-4 px-5">Disponibilidad</th>
                 <th className="py-4 px-5 text-center">Acciones</th>
               </tr>
@@ -278,6 +304,11 @@ export default function ProductosPage() {
                         </div>
                       ) : (
                         formatearPrecio(producto.precio)
+                      )}
+                      {producto.adiciones && producto.adiciones.length > 0 && (
+                        <div className="text-[11px] text-amber-300/80 mt-1 font-normal">
+                          + {producto.adiciones.length} adición(es) disponible(s)
+                        </div>
                       )}
                     </td>
 
@@ -450,7 +481,64 @@ export default function ProductosPage() {
             )}
           </div>
 
-          {/* ☁️ SECCIÓN DE SUBIDA DE IMAGEN CON CLOUDINARY */}
+          {/* SECCIÓN DINÁMICA DE ADICIONES / TOPPINGS */}
+          <div className="border border-[#3a2a18] bg-[#1a1209]/40 p-3 sm:p-4 rounded-2xl space-y-3">
+            <div className="flex justify-between items-center">
+              <label className="text-xs sm:text-sm font-semibold text-[#f0a030] flex items-center gap-1.5">
+                <span className="text-base">🧀</span>
+                <span>Adiciones / Toppings (Opcional)</span>
+              </label>
+              <button
+                type="button"
+                onClick={agregarAdicion}
+                className="bg-[#231a0d] hover:bg-[#3a2a18] text-[#f5ead8] border border-[#3a2a18] text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1 shrink-0"
+              >
+                <Plus size={14} /> <span>Agregar Adición</span>
+              </button>
+            </div>
+
+            {formData.adiciones.length === 0 ? (
+              <p className="text-xs text-[#9c8a6e] italic text-center py-2">
+                No hay adiciones añadidas. El plato se servirá estándar.
+              </p>
+            ) : (
+              <div className="space-y-2 pt-1">
+                {formData.adiciones.map((adicion, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <div className="relative flex-1">
+                      <input
+                        type="text"
+                        placeholder="Nombre (Queso Extra)"
+                        value={adicion.nombre}
+                        onChange={(e) => actualizarAdicion(index, 'nombre', e.target.value)}
+                        className="w-full bg-[#1a1209] border border-[#3a2a18] rounded-xl px-3 py-2 text-xs text-[#f5ead8] focus:outline-none focus:border-[#e8621a]"
+                      />
+                    </div>
+                    <div className="relative flex-1">
+                      <input
+                        type="number"
+                        placeholder="Precio (3000)"
+                        value={adicion.precio}
+                        onChange={(e) => actualizarAdicion(index, 'precio', e.target.value)}
+                        className="w-full bg-[#1a1209] border border-[#3a2a18] rounded-xl px-3 py-2 text-xs text-[#f5ead8] focus:outline-none focus:border-[#e8621a]"
+                      />
+                      <span className="absolute right-3 top-2 text-xs text-[#9c8a6e]">$</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => eliminarAdicion(index)}
+                      className="bg-red-500/10 hover:bg-red-600 text-red-400 hover:text-white p-2 rounded-xl transition-colors border border-red-500/20 shrink-0"
+                      title="Eliminar adición"
+                    >
+                      <Trash size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* SECCIÓN DE SUBIDA DE IMAGEN CON CLOUDINARY */}
           <div className="space-y-2 border border-[#3a2a18] bg-[#1a1209]/40 p-4 rounded-2xl">
             <label className="text-xs sm:text-sm font-semibold text-[#f0a030] flex items-center gap-1.5">
               <ImageIcon size={16} />
