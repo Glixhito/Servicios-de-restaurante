@@ -6,21 +6,42 @@ import {
   IsEnum,
   IsOptional,
   ValidateNested,
+  Min,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { TipoPagoQR } from '../../pago/entities/pago-qr.entity';
+
+// 🧀 NUEVO DTO: Valida cada adición/topping que viaja en el ítem del carrito
+export class AdicionSeleccionadaDto {
+  @IsOptional()
+  @IsUUID()
+  id?: string;
+
+  @IsString()
+  nombre: string;
+
+  @IsNumber()
+  @Min(0)
+  precio: number;
+}
 
 export class ItemCarritoDto {
   @IsUUID()
   producto_id: string;
 
-  // 👈 NUEVO: Identificador de la porción/gramaje elegido (opcional para productos estándar)
   @IsUUID()
   @IsOptional()
   producto_porcion_id?: string;
 
   @IsNumber()
   cantidad: number;
+
+  // 🧀 NUEVO CAMPO: Recibe el arreglo de adiciones seleccionadas para este plato
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => AdicionSeleccionadaDto)
+  adiciones_seleccionadas?: AdicionSeleccionadaDto[];
 }
 
 export class ClienteDataDto {

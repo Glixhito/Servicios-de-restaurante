@@ -122,7 +122,7 @@ export class PedidoService {
         }
       }
 
-      // Calcular subtotal y validar items del carrito (Soporte para porciones y precios seguros)
+      // Calcular subtotal y validar items del carrito (Soporte para porciones, adiciones y precios seguros)
       let subtotal = 0;
       const itemsCalculados = [];
       const itemsCarrito = dto.carrito || [];
@@ -136,7 +136,7 @@ export class PedidoService {
           throw new BadRequestException(`Producto no disponible o no encontrado`);
         }
 
-        let precioUnitario = 0;
+        let precioUnitarioBase = 0;
         let porcionId = null;
 
         // Si el ítem especifica una porción (ej. carne de 400g)
@@ -149,24 +149,44 @@ export class PedidoService {
             throw new BadRequestException(`La porción seleccionada no es válida para el producto ${producto.nombre}`);
           }
 
-          precioUnitario = Number(porcion.precio);
+          precioUnitarioBase = Number(porcion.precio);
           porcionId = porcion.id;
         } else {
           // Si es un producto estándar con precio base
           if (producto.precio === null || producto.precio === undefined) {
             throw new BadRequestException(`El producto ${producto.nombre} requiere que selecciones una porción o tamaño`);
           }
-          precioUnitario = Number(producto.precio);
+          precioUnitarioBase = Number(producto.precio);
         }
 
-        const precioTotalItem = precioUnitario * item.cantidad;
+        // 🧀 PROCESAR ADICIONES / TOPPINGS Y CREAR EL SNAPSHOT
+        let precioAdicionesUnitario = 0;
+        const adicionesSnapshot = [];
+
+        if (item.adiciones_seleccionadas && Array.isArray(item.adiciones_seleccionadas)) {
+          for (const adDto of item.adiciones_seleccionadas) {
+            const precioAdicion = Number(adDto.precio) || 0;
+            precioAdicionesUnitario += precioAdicion;
+
+            adicionesSnapshot.push({
+              id: adDto.id || null,
+              nombre: adDto.nombre,
+              precio: precioAdicion,
+            });
+          }
+        }
+
+        // Precio unitario final por unidad (Base + Adiciones)
+        const precioUnitarioFinal = precioUnitarioBase + precioAdicionesUnitario;
+        const precioTotalItem = precioUnitarioFinal * item.cantidad;
         subtotal += precioTotalItem;
 
         itemsCalculados.push({
           producto_id: producto.id,
           producto_porcion_id: porcionId,
           cantidad: item.cantidad,
-          precio_unitario: precioUnitario,
+          precio_unitario: precioUnitarioFinal,
+          adiciones_seleccionadas: adicionesSnapshot.length > 0 ? adicionesSnapshot : null,
         });
       }
 
@@ -192,7 +212,7 @@ export class PedidoService {
       nuevoPedido.cliente = { id: clienteFinalId } as any; 
       const pedidoGuardado = await queryRunner.manager.save(nuevoPedido);
 
-      // Guardar detalles del pedido con su porción y precio blindado
+      // Guardar detalles del pedido con su porción, precio blindado y el snapshot de adiciones
       for (const itemCalc of itemsCalculados) {
         const nuevoDetalle = queryRunner.manager.create(DetallePedido, {
           pedido_id: pedidoGuardado.id,          
@@ -202,7 +222,8 @@ export class PedidoService {
           producto: { id: itemCalc.producto_id }, 
           ...(itemCalc.producto_porcion_id ? { productoPorcion: { id: itemCalc.producto_porcion_id } } : {}),
           cantidad: itemCalc.cantidad,
-          precio_unitario_en_momento: itemCalc.precio_unitario
+          precio_unitario_en_momento: itemCalc.precio_unitario,
+          adiciones_seleccionadas: itemCalc.adiciones_seleccionadas,
         } as any);
         await queryRunner.manager.save(nuevoDetalle);
       }
