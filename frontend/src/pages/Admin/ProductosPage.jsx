@@ -4,8 +4,7 @@ import { categoriasService } from '../../services/categoriasService'
 import Loading from '../../components/shared/Loading'
 import Alert from '../../components/shared/Alert'
 import Modal from '../../components/shared/Modal'
-import { Edit, Trash2, Plus, Eye, EyeOff, UtensilsCrossed, Package, Trash, Upload, Image as ImageIcon, Cheese } from 'lucide-react'
-
+import { Edit, Trash2, Plus, Eye, EyeOff, UtensilsCrossed, Package, Trash, Upload, Image as ImageIcon } from 'lucide-react'
 export default function ProductosPage() {
   const [productos, setProductos] = useState([])
   const [categorias, setCategorias] = useState([])
